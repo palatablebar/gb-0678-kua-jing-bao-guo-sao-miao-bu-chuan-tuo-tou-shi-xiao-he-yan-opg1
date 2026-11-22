@@ -34,16 +34,40 @@ def create_app():
     @application.get("/api/runs")
     def history(): return {"runs":store.history()}
     @application.get("/api/runs/<run_id>")
-    def run_detail(run_id): return store.get(run_id)
+    def run_detail(run_id):
+        run=store.get(run_id)
+        if run.get("conclusions") is None or run.get("settlement") is None:
+            from app.clock import settle_run
+            conclusions,totals=settle_run(run["stages"],run["run_id"])
+            run={**run,"conclusions":conclusions,"settlement":totals}
+        if run.get("policy") is None:
+            from app.clock import POLICY
+            run={**run,"policy":dict(POLICY)}
+        return run
     @application.post("/api/runs/<run_id>/review")
     def review(run_id):
         p=request.get_json(silent=True) or {}
         if not isinstance(p.get("version"),int): raise DomainError("BAD_VERSION","请提供版本号")
         return store.review(run_id,p["version"],p.get("decision"))
+    @application.post("/api/runs/<run_id>/scans")
+    def supplement(run_id):
+        file=request.files.get("file")
+        p=request.get_json(silent=True) if file is None else None
+        if file is not None: extra=file.read();version=request.form.get("version",type=int)
+        elif isinstance(p,dict):
+            raw=p.get("csv");version=p.get("version")
+            if not isinstance(raw,str): raise DomainError("BAD_CSV","CSV需要文本")
+            extra=raw.encode()
+        else: raise DomainError("NO_FILE","请选择补传扫描文件")
+        return pipeline.supplement(run_id,version,extra)
     @application.get("/api/runs/<run_id>/archive")
     def archive(run_id):
         from app.archive import build_archive
         run=store.get(run_id)
+        if run.get("conclusions") is None or run.get("settlement") is None:
+            from app.clock import settle_run
+            conclusions,totals=settle_run(run["stages"],run["run_id"])
+            run={**run,"conclusions":conclusions,"settlement":totals}
         return application.response_class(build_archive(run),mimetype="text/csv",headers={"Content-Disposition":'attachment; filename="evidence.csv"'})
     for index,(slug,title) in enumerate(MODULES,1):
         module=importlib.import_module(f"app.modules.m{index}_{slug}.handler")

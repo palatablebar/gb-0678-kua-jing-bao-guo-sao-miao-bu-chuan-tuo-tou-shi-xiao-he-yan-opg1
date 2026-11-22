@@ -1,5 +1,5 @@
 from app.reasons import reject
-NODES={"收件":"ACCEPT","ACCEPT":"ACCEPT","起运":"DEPART","DEPART":"DEPART","清关":"CUSTOMS","CUSTOMS":"CUSTOMS","妥投":"DELIVERED","DELIVERED":"DELIVERED"}
+NODES={"收件":"ACCEPT","ACCEPT":"ACCEPT","揽收":"PICKUP","PICKUP":"PICKUP","起运":"DEPART","DEPART":"DEPART","清关":"CUSTOMS","CUSTOMS":"CUSTOMS","妥投":"DELIVERED","DELIVERED":"DELIVERED"}
 DESTINATIONS={"JP":"Asia/Tokyo","US":"America/New_York","DE":"Europe/Berlin"}
 def evaluate(rows,context):
     good=[];bad=[]
